@@ -1,0 +1,1 @@
+"""OneTwoTrip flight price monitor."""

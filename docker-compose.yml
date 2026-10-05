@@ -1,0 +1,65 @@
+x-monitor-environment: &monitor-environment
+  DATABASE_URL: "postgresql://${POSTGRES_USER:-flight_monitor}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-flight_monitor}"
+  ORIGIN: "${ORIGIN:-LED}"
+  DESTINATION: "${DESTINATION:-MOW}"
+  DEPARTURE_DATE: "${DEPARTURE_DATE:-2026-11-04}"
+  ADULTS: "${ADULTS:-1}"
+  CABIN_CLASS: "${CABIN_CLASS:-E}"
+  DIRECT_ONLY: "${DIRECT_ONLY:-true}"
+  RECHECK_DELAY_SECONDS: "${RECHECK_DELAY_SECONDS:-30}"
+  BROWSER_CHANNEL: "${BROWSER_CHANNEL:-}"
+  BROWSER_TIMEOUT_SECONDS: "${BROWSER_TIMEOUT_SECONDS:-60}"
+  TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN}"
+  TELEGRAM_CHAT_ID: "${TELEGRAM_CHAT_ID}"
+  TELEGRAM_OWNER_CHAT_ID: "${TELEGRAM_OWNER_CHAT_ID}"
+  TELEGRAM_NOTIFY_EVERY_RUN: "${TELEGRAM_NOTIFY_EVERY_RUN:-false}"
+  MAX_TELEGRAM_USERS: "${MAX_TELEGRAM_USERS:-3}"
+  TELEGRAM_INVITE_TTL_HOURS: "${TELEGRAM_INVITE_TTL_HOURS:-24}"
+  MANUAL_CHECK_COOLDOWN_SECONDS: "${MANUAL_CHECK_COOLDOWN_SECONDS:-180}"
+  CHECK_LOCK_TTL_SECONDS: "${CHECK_LOCK_TTL_SECONDS:-600}"
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-flight_monitor}"
+      POSTGRES_USER: "${POSTGRES_USER:-flight_monitor}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  flight-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: flight-monitor-prod:local
+    command: ["python", "-m", "flight_monitor", "bot"]
+    environment: *monitor-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: flight-monitor-prod:local
+    command: ["python", "-m", "flight_monitor.scheduler"]
+    environment:
+      <<: *monitor-environment
+      CHECK_INTERVAL_MINUTES: "${CHECK_INTERVAL_MINUTES:-60}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

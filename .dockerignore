@@ -1,0 +1,15 @@
+.env
+.venv/
+.git/
+.test-tmp/
+.pytest_cache/
+__pycache__/
+*.pyc
+.pw-browsers/
+*.sqlite3
+*.sqlite3-*
+data/
+work/
+outputs/
+tests/
+*.log

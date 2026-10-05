@@ -1,0 +1,11 @@
+.venv/
+.pw-browsers/
+__pycache__/
+.pytest_cache/
+.test-tmp/
+*.py[cod]
+.env
+*.sqlite3
+*.sqlite3-*
+data/
+work/live-*.json
